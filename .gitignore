@@ -1,2 +1,7 @@
 *.venv
 opt.ipynb
+*Test_data
+weights/codeformers/codeformer.pth
+weights/gfpgan/GFPGANv1.4.pth
+weights/mp/blaze_face_short_range.tflite
+weights/mp/face_landmarker.task

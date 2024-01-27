@@ -326,13 +326,18 @@ class FaceHelpers:
         coords = np.array(coords)
         coords = (coords*[img.shape[1], img.shape[0]]).astype(np.int32)
 
+        center = np.mean(coords, axis=0)
+
         mask = np.zeros((img.shape[0], img.shape[1]))
         mask = cv2.fillConvexPoly(mask, coords, 1)
-        mask = mask.astype(bool)
+        # smoothen the mask
+        mask = cv2.GaussianBlur(mask, (11,11), 0)
+        mask = cv2.normalize(mask, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8UC1)
+        mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
 
         original_mask = mask
 
-        return original_mask
+        return original_mask, center
 
     def extract_face(self, original_img, frame_no=0):
         """
@@ -578,7 +583,7 @@ class FaceHelpers:
         return ready_to_paste
 
 
-    def paste_back(self, ready_to_paste, background, original_mask):
+    def paste_back(self, ready_to_paste, background, original_mask, center):
         """
         Pastes the face back on the background.
 
@@ -591,11 +596,11 @@ class FaceHelpers:
         """
         # print("Pasting face back...")
         try:
-            background[original_mask] = ready_to_paste[original_mask]
+            blended_image = cv2.seamlessClone(ready_to_paste, background, original_mask, center, cv2.NORMAL_CLONE)
         except IndexError as e:
             print(f"Failed to paste face back onto background: {e}")
             print(f"Saving the frame for manual inspection.")
             os.makedirs(os.path.join(file_check.CURRENT_FILE_DIRECTORY, 'error_frames'), exist_ok=True)
             cv2.imwrite(os.path.join(file_check.CURRENT_FILE_DIRECTORY, 'error_frames', f'frame_paste_back.jpg'), ready_to_paste)
             exit(1)
-        return background
+        return blended_image

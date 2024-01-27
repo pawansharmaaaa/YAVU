@@ -1,5 +1,6 @@
 *.venv
 opt.ipynb
+opt2.ipynb
 *Test_data
 weights/codeformers/codeformer.pth
 weights/gfpgan/GFPGANv1.4.pth

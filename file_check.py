@@ -11,6 +11,7 @@ LANDMARKER_MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/face_lan
 DETECTOR_MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/latest/blaze_face_short_range.tflite'
 GFPGAN_MODEL_URL = 'https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.4.pth'
 CODEFORMERS_MODEL_URL = 'https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/codeformer.pth'
+PARSENET_MODEL_URL = 'https://github.com/xinntao/facexlib/releases/download/v0.2.2/parsing_parsenet.pth'
 # WAV2LIP_MODEL_URL = ['https://drive.google.com/uc?id=1paYmN1KAZ2oPQPV-XauCoRUorhkOt0s2','https://drive.google.com/uc?id=1dhunIPYumA7WnR7dDsd7jsMgzgpOlg0V']
 # WAV2LIP_GAN_MODEL_URL = ['https://drive.google.com/uc?id=1WpqCULKQQcaCNf827h1qgjMHZENYHk-_','https://drive.google.com/uc?id=16UHRZv-oTW629AiMkSot5MrgDb42RJTX']
 
@@ -21,6 +22,7 @@ WEIGHTS_DIR = os.path.join(CURRENT_FILE_DIRECTORY, 'weights')
 MP_WEIGHTS_DIR = os.path.join(WEIGHTS_DIR, 'mp')
 GFPGAN_WEIGHTS_DIR = os.path.join(WEIGHTS_DIR, 'gfpgan')
 CODEFORMERS_WEIGHTS_DIR = os.path.join(WEIGHTS_DIR, 'codeformers')
+PARSENET_WEIGHTS_DIR = os.path.join(WEIGHTS_DIR, 'parsenet')
 # WAV2LIP_WEIGHTS_DIR = os.path.join(WEIGHTS_DIR, 'wav2lip')
 
 TEMP_DIR = os.path.join(CURRENT_FILE_DIRECTORY, 'temp')
@@ -33,6 +35,7 @@ MP_LANDMARKER_MODEL_PATH = os.path.join(MP_WEIGHTS_DIR, 'face_landmarker.task')
 MP_DETECTOR_MODEL_PATH = os.path.join(MP_WEIGHTS_DIR, 'blaze_face_short_range.tflite')
 GFPGAN_MODEL_PATH = os.path.join(GFPGAN_WEIGHTS_DIR, 'GFPGANv1.4.pth')
 CODEFORMERS_MODEL_PATH = os.path.join(CODEFORMERS_WEIGHTS_DIR, 'codeformer.pth')
+PARSENET_MODEL_PATH = os.path.join(PARSENET_WEIGHTS_DIR, 'parsing_parsenet.pth')
 # WAV2LIP_MODEL_PATH = os.path.join(WAV2LIP_WEIGHTS_DIR, 'wav2lip.pth')
 # WAV2LIP_GAN_MODEL_PATH = os.path.join(WAV2LIP_WEIGHTS_DIR, 'wav2lip_gan.pth')
 
@@ -98,6 +101,13 @@ def perform_check():
                                model_dir=CODEFORMERS_WEIGHTS_DIR,
                                progress=True,
                                file_name='codeformer.pth')
+            
+        if not os.path.exists(PARSENET_MODEL_PATH):
+            print("Downloading ParseNet model...")
+            load_file_from_url(url=PARSENET_MODEL_URL,
+                               model_dir=PARSENET_WEIGHTS_DIR,
+                               progress=True,
+                               file_name='parsing_parsenet.pth')
             
         # if not os.path.exists(WAV2LIP_MODEL_PATH):
         #     print("Downloading Wav2Lip model...")

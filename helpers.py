@@ -330,14 +330,15 @@ class FaceHelpers:
 
         mask = np.zeros((img.shape[0], img.shape[1]))
         mask = cv2.fillConvexPoly(mask, coords, 1)
+        binary_mask = mask.copy().astype(bool)
         # smoothen the mask
-        mask = cv2.GaussianBlur(mask, (11,11), 0)
+        mask = cv2.GaussianBlur(mask.copy(), (11,11), 0)
         mask = cv2.normalize(mask, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8UC1)
         mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
 
         original_mask = mask
 
-        return original_mask, center
+        return original_mask, center, binary_mask
 
     def extract_face(self, original_img, frame_no=0):
         """
@@ -349,11 +350,11 @@ class FaceHelpers:
         Returns:
             Only The face.
         """
-        original_mask = self.gen_face_mask(original_img, frame_no)
+        _, _, binary_mask = self.gen_face_mask(original_img, frame_no)
         extracted_face = np.zeros_like(original_img)
-        extracted_face[original_mask] = original_img[original_mask]
+        extracted_face[binary_mask] = original_img[binary_mask]
 
-        return extracted_face, original_mask
+        return extracted_face
     
 
     def findEuclideanDistance(self, source_representation, test_representation):

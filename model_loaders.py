@@ -34,31 +34,29 @@ class model_loaders:
                                     map_location=lambda storage, loc: storage)
         return checkpoint
 
-    # def load_wav2lip_model(self):
-    #     model = Wav2Lip()
-    #     print(f"Loading wav2lip checkpoint from: {file_check.WAV2LIP_MODEL_PATH}")
-    #     checkpoint = self._load(file_check.WAV2LIP_MODEL_PATH)
-    #     s = checkpoint["state_dict"]
-    #     new_s = {}
-    #     for k, v in s.items():
-    #         new_s[k.replace('module.', '')] = v
-    #     model.load_state_dict(new_s)
+    def load_realesrgan_model(self):
 
-    #     model = model.to(self.device)
-    #     return model.eval()
-
-    # def load_wav2lip_gan_model(self):
-    #     model = Wav2Lip()
-    #     print(f"Loading wav2lip checkpoint from: {file_check.WAV2LIP_GAN_MODEL_PATH}")
-    #     checkpoint = self._load(file_check.WAV2LIP_GAN_MODEL_PATH)
-    #     s = checkpoint["state_dict"]
-    #     new_s = {}
-    #     for k, v in s.items():
-    #         new_s[k.replace('module.', '')] = v
-    #     model.load_state_dict(new_s)
-
-    #     model = model.to(self.device)
-    #     return model.eval()
+        if not torch.cuda.is_available():  # CPU
+            import warnings
+            warnings.warn("YAVU uses RealESRGAN for backgound upscaling and it's inference is really slow on CPU. Please consider using GPU.")
+            bg_upsampler = None
+        else:
+            from basicsr.archs.rrdbnet_arch import RRDBNet
+            from realesrgan import RealESRGANer
+            esr_model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32, scale=4)
+            netscale = 4
+            bg_upsampler = RealESRGANer(
+                scale=netscale,
+                model_path=file_check.REALESRGAN_MODEL_PATH,
+                dni_weight=None,
+                model=esr_model,
+                tile=0,
+                tile_pad=10,
+                pre_pad=0,
+                half=False,
+                gpu_id=None)
+            
+        return bg_upsampler
 
     def load_gfpgan_model(self):
         
@@ -95,16 +93,12 @@ class model_loaders:
         checkpoint = torch.load(ckpt_path)['params_ema']
         model.load_state_dict(checkpoint)
         return model.eval()
-
-    def load_parsenet(half=False, device='cuda', model_rootpath=None):
-        
-        model = ParseNet(in_size=512, out_size=512, parsing_ch=19)
-        load_net = torch.load(file_check.PARSENET_MODEL_PATH, map_location=lambda storage, loc: storage)
-        model.load_state_dict(load_net, strict=True)
-        model.eval()
-        model = model.to(device)
-        
-        return model
+    
+    def restore_background(self, background, outscale=1.0):
+        bgupsampler = self.load_realesrgan_model()
+        if bgupsampler is not None:
+            background = bgupsampler.enhance(background, outscale=outscale)
+        return background
     
     def restore_wGFPGAN(self, dubbed_face):
         dubbed_face = cv2.resize(dubbed_face.astype(np.uint8) / 255., (512, 512), interpolation=cv2.INTER_LANCZOS4)

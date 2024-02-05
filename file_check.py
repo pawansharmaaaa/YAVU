@@ -1,7 +1,6 @@
 # This file is a part of https://github.com/pawansharmaaaa/Lip_Wise/ repository.
 
 import os
-# import gdown
 
 import basicsr.archs as archs
 
@@ -11,9 +10,7 @@ LANDMARKER_MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/face_lan
 DETECTOR_MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/latest/blaze_face_short_range.tflite'
 GFPGAN_MODEL_URL = 'https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.4.pth'
 CODEFORMERS_MODEL_URL = 'https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/codeformer.pth'
-PARSENET_MODEL_URL = 'https://github.com/xinntao/facexlib/releases/download/v0.2.2/parsing_parsenet.pth'
-# WAV2LIP_MODEL_URL = ['https://drive.google.com/uc?id=1paYmN1KAZ2oPQPV-XauCoRUorhkOt0s2','https://drive.google.com/uc?id=1dhunIPYumA7WnR7dDsd7jsMgzgpOlg0V']
-# WAV2LIP_GAN_MODEL_URL = ['https://drive.google.com/uc?id=1WpqCULKQQcaCNf827h1qgjMHZENYHk-_','https://drive.google.com/uc?id=16UHRZv-oTW629AiMkSot5MrgDb42RJTX']
+REAL_ESRGAN_MODEL_URL = 'https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth'
 
 CURRENT_FILE_DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 
@@ -22,8 +19,7 @@ WEIGHTS_DIR = os.path.join(CURRENT_FILE_DIRECTORY, 'weights')
 MP_WEIGHTS_DIR = os.path.join(WEIGHTS_DIR, 'mp')
 GFPGAN_WEIGHTS_DIR = os.path.join(WEIGHTS_DIR, 'gfpgan')
 CODEFORMERS_WEIGHTS_DIR = os.path.join(WEIGHTS_DIR, 'codeformers')
-PARSENET_WEIGHTS_DIR = os.path.join(WEIGHTS_DIR, 'parsenet')
-# WAV2LIP_WEIGHTS_DIR = os.path.join(WEIGHTS_DIR, 'wav2lip')
+REALESRGAN_WEIGHTS_DIR = os.path.join(WEIGHTS_DIR, 'realesrgan')
 
 TEMP_DIR = os.path.join(CURRENT_FILE_DIRECTORY, 'temp')
 NPY_FILES_DIR = os.path.join(TEMP_DIR, 'npy_files')
@@ -35,20 +31,11 @@ MP_LANDMARKER_MODEL_PATH = os.path.join(MP_WEIGHTS_DIR, 'face_landmarker.task')
 MP_DETECTOR_MODEL_PATH = os.path.join(MP_WEIGHTS_DIR, 'blaze_face_short_range.tflite')
 GFPGAN_MODEL_PATH = os.path.join(GFPGAN_WEIGHTS_DIR, 'GFPGANv1.4.pth')
 CODEFORMERS_MODEL_PATH = os.path.join(CODEFORMERS_WEIGHTS_DIR, 'codeformer.pth')
-PARSENET_MODEL_PATH = os.path.join(PARSENET_WEIGHTS_DIR, 'parsing_parsenet.pth')
-# WAV2LIP_MODEL_PATH = os.path.join(WAV2LIP_WEIGHTS_DIR, 'wav2lip.pth')
-# WAV2LIP_GAN_MODEL_PATH = os.path.join(WAV2LIP_WEIGHTS_DIR, 'wav2lip_gan.pth')
+REALESRGAN_MODEL_PATH = os.path.join(REALESRGAN_WEIGHTS_DIR, 'RealESRGAN_x4plus.pth')
 
 def __init__():
     perform_check()
     archs.__init__()
-
-# def download_from_drive(url, model_dir, progress, file_name):
-#     output_path = os.path.join(model_dir, file_name)
-#     try:
-#         gdown.download(url, output=output_path, quiet=(progress is False))
-#     except RuntimeError as e:
-#         print(f"Error occurred while downloading from drive: {e}")
 
 def perform_check():
     try:        
@@ -71,9 +58,9 @@ def perform_check():
             os.makedirs(MP_WEIGHTS_DIR)
             os.makedirs(GFPGAN_WEIGHTS_DIR)
             os.makedirs(CODEFORMERS_WEIGHTS_DIR)
-            # os.makedirs(WAV2LIP_WEIGHTS_DIR)
+            os.makedirs(REALESRGAN_WEIGHTS_DIR)
 
-
+        #------------------------------DOWNLOAD MODELS-----------------------------------
         if not os.path.exists(MP_LANDMARKER_MODEL_PATH):
             print("Downloading Face Landmarker model...")
             load_file_from_url(url=LANDMARKER_MODEL_URL, 
@@ -102,26 +89,12 @@ def perform_check():
                                progress=True,
                                file_name='codeformer.pth')
             
-        if not os.path.exists(PARSENET_MODEL_PATH):
-            print("Downloading ParseNet model...")
-            load_file_from_url(url=PARSENET_MODEL_URL,
-                               model_dir=PARSENET_WEIGHTS_DIR,
+        if not os.path.exists(REALESRGAN_WEIGHTS_DIR):
+            print("Downloading Real-ESRGAN model...")
+            load_file_from_url(url=REAL_ESRGAN_MODEL_URL,
+                               model_dir=REALESRGAN_WEIGHTS_DIR,
                                progress=True,
-                               file_name='parsing_parsenet.pth')
-            
-        # if not os.path.exists(WAV2LIP_MODEL_PATH):
-        #     print("Downloading Wav2Lip model...")
-        #     download_from_drive(url=WAV2LIP_MODEL_URL[1],
-        #                     model_dir=WAV2LIP_WEIGHTS_DIR,
-        #                     progress=True,
-        #                     file_name='wav2lip.pth')
-            
-        # if not os.path.exists(WAV2LIP_GAN_MODEL_PATH):
-        #     print("Downloading Wav2Lip GAN model...")
-        #     download_from_drive(url=WAV2LIP_GAN_MODEL_URL[1],
-        #                     model_dir=WAV2LIP_WEIGHTS_DIR,
-        #                     progress=True,
-        #                     file_name='wav2lip_gan.pth')
+                               file_name='realesr-general-x4v3.pth')
     
     except OSError as e:
         print(f"OS Error occurred: {e}")

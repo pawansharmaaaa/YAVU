@@ -2,3 +2,4 @@ mediapipe
 gfpgan
 basicsr
 opencv-python
+realesrgan

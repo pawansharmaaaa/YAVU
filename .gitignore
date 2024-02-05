@@ -6,3 +6,9 @@ weights/codeformers/codeformer.pth
 weights/gfpgan/GFPGANv1.4.pth
 weights/mp/blaze_face_short_range.tflite
 weights/mp/face_landmarker.task
+weights/realesrgan/realesr-general-x4v3.pth
+temp/final.png
+bkps
+weights/realesrgan/RealESRGAN_x2plus.pth
+weights/realesrgan/RealESRGAN_x4plus.pth
+temp/npy_files/image_landmarks.npy

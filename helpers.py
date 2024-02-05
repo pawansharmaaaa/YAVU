@@ -8,6 +8,18 @@ import file_check
 import mediapipe as mp
 import numpy as np
 
+class FrameDimensions:
+    _instance = None
+
+    def __new__(cls):
+        if not cls._instance:
+            cls._instance = super(FrameDimensions, cls).__new__(cls)
+        return cls._instance
+
+    def __init__(self, height=0, width=0):
+        self.height = height
+        self.width = width
+
 class model_processor:
 
     """
@@ -39,11 +51,15 @@ class model_processor:
         # frame = cv2.imread(image_path)
         # Convert frame to RGB and convert to MediaPipe image
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        height, width, _ = frame.shape
+
+        # Store frame dimensions
+        dimensions = FrameDimensions()
+        dimensions.height, dimensions.width, _ = frame.shape
+        # height, width, _ = frame.shape
         mp_frame = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame)
 
-        norm_pad_x = self.padding / width
-        norm_pad_y = self.padding / height
+        norm_pad_x = self.padding / dimensions.width
+        norm_pad_y = self.padding / dimensions.height
         
         # Initialize mediapipe
         BaseOptions = mp.tasks.BaseOptions
@@ -122,6 +138,8 @@ class model_processor:
         frame_count = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
         width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        dimensions = FrameDimensions()
+        dimensions.height, dimensions.width = height, width
 
         # Initialize mediapipe
         BaseOptions = mp.tasks.BaseOptions
@@ -275,11 +293,14 @@ class model_processor:
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 class FaceHelpers:
 
-    def __init__(self, image_mode=False, max_batch_size=16):
+    def __init__(self, image_mode=False, max_batch_size=16, dimensions=None):
 
         self.max_batch_size = max_batch_size
         self.npy_directory = file_check.NPY_FILES_DIR
         self.weights_directory = file_check.WEIGHTS_DIR
+
+        self.height = dimensions.height
+        self.width = dimensions.width
 
         self.video_landmarks_path = os.path.join(self.npy_directory,'video_landmarks.npy')
         self.image_landmarks_path = os.path.join(self.npy_directory,'image_landmarks.npy')
@@ -296,7 +317,7 @@ class FaceHelpers:
                 print("Video landmarks were not saved. Please report this issue.")
                 exit(1)
 
-    def gen_face_mask(self, img, frame_no=0):
+    def gen_face_mask(self, frame_no=0):
         """
         Generates the face mask using face oval indices from face oval landmarks.
 
@@ -307,38 +328,27 @@ class FaceHelpers:
         Returns:
             The face mask in bool format to be fed in the paste back function or extract_face function.
         """
-        if not os.path.exists(os.path.join(self.npy_directory, 'face_route_index.npy')):
-            processor = model_processor()
-            processor.gen_face_route_index()
-        try:
-            index = np.load(os.path.join(self.npy_directory, 'face_route_index.npy'))
-        except FileNotFoundError as e:
-            print("Face route index was not read. Please rerun the inference.")
-            exit(1)
+        landmarks = self.landmarks_all[frame_no]
 
-        coords = list()
-        for source_idx, target_idx in index:
-            source = self.landmarks_all[frame_no][source_idx]
-            target = self.landmarks_all[frame_no][target_idx]
-            coords.append([source[0], source[1]])
-            coords.append([target[0], target[1]])
+        # Denormalize landmarks
+        landmarks = landmarks * [self.width, self.height]
+        landmarks = landmarks.reshape(486, 1, 2).astype(np.int32)
 
-        coords = np.array(coords)
-        coords = (coords*[img.shape[1], img.shape[0]]).astype(np.int32)
+        # Create convex hull
+        hull = cv2.convexHull(landmarks[:468], clockwise=True, returnPoints=True)
 
-        center = np.mean(coords, axis=0)
+        # Get the bounding box and center from hull
+        bbox = cv2.boundingRect(hull)
+        center = (bbox[0] + bbox[2]//2, bbox[1] + bbox[3]//2)
 
-        mask = np.zeros((img.shape[0], img.shape[1]))
-        mask = cv2.fillConvexPoly(mask, coords, 1)
-        binary_mask = mask.copy().astype(bool)
-        # smoothen the mask
-        mask = cv2.GaussianBlur(mask.copy(), (11,11), 0)
-        mask = cv2.normalize(mask, None, alpha=0, beta=255, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_8UC1)
-        mask = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
+        # Generate face mask
+        mask = np.zeros((self.height, self.width), dtype=np.uint8)
+        mask = cv2.fillConvexPoly(mask, hull, 255)
 
-        original_mask = mask
+        # Generate Inverse mask
+        inv_mask = cv2.bitwise_not(mask)
 
-        return original_mask, center, binary_mask
+        return mask, inv_mask, center, bbox
 
     def extract_face(self, original_img, frame_no=0):
         """
@@ -350,9 +360,8 @@ class FaceHelpers:
         Returns:
             Only The face.
         """
-        _, _, binary_mask = self.gen_face_mask(original_img, frame_no)
-        extracted_face = np.zeros_like(original_img)
-        extracted_face[binary_mask] = original_img[binary_mask]
+        mask, _, _, _ = self.gen_face_mask(frame_no)
+        extracted_face = cv2.bitwise_and(original_img, original_img, mask=mask)
 
         return extracted_face
     
@@ -442,7 +451,7 @@ class FaceHelpers:
 
         return aligned_face, rotation_matrix  #return img and inverse afiine matrix anyway
     
-    def crop_extracted_face(self, aligned_face, rotation_matrix, frame_no=0):
+    def align_crop_face(self, extracted_face, frame_no=0):
         """
         Crops the face from the image (Image with only face and black background).
 
@@ -452,101 +461,30 @@ class FaceHelpers:
         Returns:
             Only The face.
         """
-        old_bbox = self.landmarks_all[frame_no][478:480].copy()
-        old_landmarks = self.landmarks_all[frame_no][480:].copy()
+        aligned_face, rotation_matrix = self.alignment_procedure(extracted_face, frame_no)
 
-        # Unzip the bbox and landmarks
-        old_bbox = old_bbox * [aligned_face.shape[1], aligned_face.shape[0]]
-        old_landmarks = old_landmarks * [aligned_face.shape[1], aligned_face.shape[0]]
+        aligned_grey = cv2.cvtColor(aligned_face.copy(), cv2.COLOR_BGR2GRAY)
+        # Threshold the image to separate white and black pixels
+        threshold = 1  # Adjust this value as needed based on image lighting
+        ret, binary_image = cv2.threshold(aligned_grey, threshold, 255, cv2.THRESH_BINARY)
 
-        # Get new center from rotation_matrix
-        new_center = (rotation_matrix[:,2:])
-        new_center = np.reshape(new_center, (1, 2))
+        # Find contours of white objects
+        contours, hierarchy = cv2.findContours(binary_image, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
-        # New_landmarks
-        rotated_landmarks = np.dot(old_landmarks, rotation_matrix[:,:2].T) + new_center
+        # Assuming there's only one white ball (adjust logic if needed)
+        if len(contours) > 0:
+            # Find the largest contour (likely the ball)
+            largest_contour = max(contours, key=cv2.contourArea)
 
-        # Calculate Distances for bbox
-        d1 = abs(old_landmarks[4][0] - old_bbox[0][0])
-        d2 = abs(old_landmarks[5][0] - old_bbox[1][0])
-        d3 = abs(max(old_landmarks[0][1], old_landmarks[1][1]) - old_bbox[0][1])
-        d4 = abs(old_landmarks[3][1] - old_bbox[1][1])
+            # Calculate the bounding rectangle
+            aligned_bbox = cv2.boundingRect(largest_contour)
 
-        xmin = rotated_landmarks[4][0] - d1
-        xmax = rotated_landmarks[5][0] + d2
-        ymin = rotated_landmarks[0][1] - d3
-        ymax = rotated_landmarks[3][1] + d4
+        cropped_face = aligned_face[aligned_bbox[1]:aligned_bbox[1]+aligned_bbox[3], aligned_bbox[0]:aligned_bbox[0]+aligned_bbox[2]]
 
-        # New_bbox
-        bbox = np.array([[xmin, ymin], [xmax, ymax]]).astype(np.int32)
+        return cropped_face, aligned_bbox, rotation_matrix
 
-        # Crop face
-        try:
-            cropped_face = aligned_face[bbox[0,1]:bbox[1,1], bbox[0,0]:bbox[1,0]]
-        except IndexError as e:
-            print(f"Failed to crop face: {e}")
-            print(f"Saving the frame for manual inspection.")
-            os.makedirs(os.path.join(file_check.CURRENT_FILE_DIRECTORY, 'error_frames'), exist_ok=True)
-            cv2.imwrite(os.path.join(file_check.CURRENT_FILE_DIRECTORY, 'error_frames', f'frame_crop{frame_no}.jpg'), aligned_face)
-            exit(1)
-
-        return cropped_face, bbox
-    
-        
-    def gen_data_image_mode(self, cropped_face, mel_chunks):
-        """
-        Generates data for inference in image mode.
-        Batches the data to be fed into the model.
-        Batch of image includes several images of shape (96, 96, 6) stacked together.
-        These images contain the half face and the full face.
-
-        Args:
-            cropped_face: The cropped face obtained from the crop_extracted_face function.
-            mel_chunks: The mel chunks obtained from the audio.
-        
-        Returns:
-            A batch of images of shape (96, 96, 6) and mel chunks.
-        """
-        frame_batch = []
-        mel_batch = []
-
-        # Resize face for wav2lip
-        try:
-            cropped_face = cv2.resize(cropped_face, (96, 96), interpolation=cv2.INTER_AREA)
-        except Exception as e:
-            print(f"Failed to resize face: {e}")
-            exit(1)
-
-        # Generate data for inference
-        for mel_chunk in mel_chunks:
-            frame_batch.append(cropped_face)
-            mel_batch.append(mel_chunk)
-
-            if len(frame_batch) >= self.max_batch_size:
-                frame_batch, mel_batch = np.asarray(frame_batch), np.asarray(mel_batch)
-
-                img_masked = frame_batch.copy()
-                img_masked[:, 96//2:] = 0
-
-                frame_batch = np.concatenate((img_masked, frame_batch), axis=3) / 255.
-                mel_batch = np.reshape(mel_batch, [len(mel_batch), mel_batch.shape[1], mel_batch.shape[2], 1])
-
-                yield frame_batch, mel_batch
-                frame_batch = []
-                mel_batch = []
-
-        if len(frame_batch) > 0:
-            frame_batch, mel_batch = np.asarray(frame_batch), np.asarray(mel_batch)
-
-            img_masked = frame_batch.copy()
-            img_masked[:, 96//2:] = 0
-
-            frame_batch = np.concatenate((img_masked, frame_batch), axis=3) / 255.
-            mel_batch = np.reshape(mel_batch, [len(mel_batch), mel_batch.shape[1], mel_batch.shape[2], 1])
-
-            yield frame_batch, mel_batch
-
-    def paste_back_black_bg(self, processed_face, bbox, full_frame):
+    def paste_back_black_bg(self, processed_face, aligned_bbox, full_frame):
+        bbox = np.asarray(([aligned_bbox[0], aligned_bbox[1]], [aligned_bbox[0]+aligned_bbox[2], aligned_bbox[1]+aligned_bbox[3]]))
         processed_ready = np.zeros_like(full_frame)
         try:
             processed_ready[bbox[0,1]:bbox[1,1], bbox[0,0]:bbox[1,0]] = processed_face
@@ -584,7 +522,7 @@ class FaceHelpers:
         return ready_to_paste
 
 
-    def paste_back(self, ready_to_paste, background, original_mask, center):
+    def paste_back(self, ready_to_paste, original_img, face_mask, inv_mask, center):
         """
         Pastes the face back on the background.
 
@@ -595,13 +533,19 @@ class FaceHelpers:
         Returns:
             The background with the face pasted on it.
         """
-        # print("Pasting face back...")
         try:
-            blended_image = cv2.seamlessClone(ready_to_paste, background, original_mask, center, cv2.NORMAL_CLONE)
+            # Remove the face from the background
+            background = cv2.bitwise_and(original_img, original_img, mask=inv_mask)
+
+            # Add the new face to the background
+            result = cv2.add(background, ready_to_paste)
+
+            final_blend = cv2.seamlessClone(result, original_img, face_mask, center, cv2.MIXED_CLONE)
+
         except IndexError as e:
             print(f"Failed to paste face back onto background: {e}")
             print(f"Saving the frame for manual inspection.")
             os.makedirs(os.path.join(file_check.CURRENT_FILE_DIRECTORY, 'error_frames'), exist_ok=True)
             cv2.imwrite(os.path.join(file_check.CURRENT_FILE_DIRECTORY, 'error_frames', f'frame_paste_back.jpg'), ready_to_paste)
             exit(1)
-        return blended_image
+        return final_blend

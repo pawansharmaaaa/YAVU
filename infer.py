@@ -13,7 +13,6 @@ def infer_image(image, restorer, model_name, weight, super_sample, outscale):
     ml = model_loaders.ModelLoaders(restorer, model_name, weight)
     dim = helpers.FrameDimensions()
     det = helpers.ModelProcessors()
-    help = helpers.FaceHelpers(image_mode=True, dimensions=dim)
 
     # Perform check again
     fc.perform_check()
@@ -21,6 +20,10 @@ def infer_image(image, restorer, model_name, weight, super_sample, outscale):
     # Load the image
     image_name = os.path.basename(image)
     original_img = cv2.imread(image)
+
+    # Get frame dimensions
+    dim.height, dim.width = original_img.shape[:2]
+    help = helpers.FaceHelpers(image_mode=True, dimensions=dim)
 
     # Get The face Coordinates
     det.detect_for_image(original_img)
@@ -30,7 +33,7 @@ def infer_image(image, restorer, model_name, weight, super_sample, outscale):
     extracted_face = help.extract_face(original_img)
     cropped_face, aligned_bbox, rotmax = help.align_crop_face(extracted_face)
 
-    cropped_face_size = cropped_face.shape[:2][::-1]
+    cropped_face_size = cropped_face.shape[:2]
 
     # Feed to Model
     if restorer == 'GFPGAN':
@@ -39,7 +42,7 @@ def infer_image(image, restorer, model_name, weight, super_sample, outscale):
         restored_face = ml.restore_wCodeFormer(cropped_face)
 
     # Postprocess the image
-    restored_face = cv2.resize(restored_face, cropped_face_size, interpolation=cv2.INTER_LANCZOS4)
+    restored_face = cv2.resize(restored_face, (cropped_face_size[1], cropped_face_size[0]), interpolation=cv2.INTER_LANCZOS4)
     processed_ready = help.paste_back_black_bg(restored_face, aligned_bbox, original_img)
     ready_to_paste = help.unwarp_align(processed_ready, rotmax)
     final_blend = help.paste_back(ready_to_paste, original_img, mask, inv_mask, center)
@@ -54,4 +57,4 @@ def infer_image(image, restorer, model_name, weight, super_sample, outscale):
     return save_path
 
 if __name__ == '__main__':
-    infer_image('/content/ts2.png', 'GFPGAN', 'RealESRGAN_x4plus', 0.5, True, 1.0)
+    infer_image(r'E:\YAVU\Test_data\Inputs\ts2.png', 'GFPGAN', 'RealESRGAN_x4plus', 0.5, True, 1.0)

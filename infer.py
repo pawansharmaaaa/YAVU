@@ -16,7 +16,7 @@ def infer_image(image, restorer, model_name, weight, super_sample, outscale):
     help = helpers.FaceHelpers(image_mode=True, dimensions=dim)
 
     # Perform check again
-    fc.file_check()
+    fc.perform_check()
 
     # Load the image
     image_name = os.path.basename(image)

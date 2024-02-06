@@ -48,7 +48,7 @@ def infer_image(image, restorer, model_name, weight, super_sample, outscale):
     final_blend = help.paste_back(ready_to_paste, original_img, mask, inv_mask, center)
 
     if super_sample:
-        final_blend = ml.restore_background(final_blend, outscale=outscale)
+        final_blend, _ = ml.restore_background(final_blend, outscale=outscale)
 
     save_path = os.path.join(fc.OUTPUT_DIR, image_name)
 

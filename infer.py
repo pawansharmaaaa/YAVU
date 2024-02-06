@@ -10,7 +10,7 @@ def infer_image(image, restorer, model_name, weight, super_sample, outscale):
     
     # Create Objetcs
     fc = file_check.FileCheck(model_name)
-    ml = model_loaders(restorer, model_name, weight)
+    ml = model_loaders.ModelLoaders(restorer, model_name, weight)
     dim = helpers.FrameDimensions()
     det = helpers.ModelProcessors()
     help = helpers.FaceHelpers(image_mode=True, dimensions=dim)

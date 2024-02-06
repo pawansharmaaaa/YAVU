@@ -28,8 +28,6 @@ class ModelLoaders:
         elif restorer == 'CodeFormer':
             self.restorer = self.load_codeformer_model()
 
-        self.fc = file_check.FileCheck(self.model_name)
-
     def _load(self, checkpoint_path):
         if self.device == 'cuda':
             checkpoint = torch.load(checkpoint_path)
@@ -39,6 +37,8 @@ class ModelLoaders:
         return checkpoint
 
     def load_realesrgan_model(self):
+
+        fc = file_check.FileCheck(self.model_name)
 
         if not torch.cuda.is_available():  # CPU
             import warnings
@@ -66,7 +66,7 @@ class ModelLoaders:
 
             bg_upsampler = RealESRGANer(
                 scale=netscale,
-                model_path=self.fc.REALESRGAN_MODEL_PATH,
+                model_path=fc.REALESRGAN_MODEL_PATH,
                 dni_weight=None,
                 model=model,
                 tile=0,
@@ -78,8 +78,10 @@ class ModelLoaders:
         return bg_upsampler
 
     def load_gfpgan_model(self):
+
+        fc = file_check.FileCheck(self.model_name)
         
-        print(f"Load GFPGAN checkpoint from: {self.fc.GFPGAN_MODEL_PATH}")
+        print(f"Load GFPGAN checkpoint from: {fc.GFPGAN_MODEL_PATH}")
         gfpgan = GFPGANv1Clean(
                         out_size=512,
                         num_style_feat=512,
@@ -92,7 +94,7 @@ class ModelLoaders:
                         narrow=1,
                         sft_half=True)
 
-        loadnet = torch.load(self.fc.GFPGAN_MODEL_PATH)
+        loadnet = torch.load(fc.GFPGAN_MODEL_PATH)
 
         if 'params_ema' in loadnet:
             keyname = 'params_ema'
@@ -104,11 +106,12 @@ class ModelLoaders:
         return restorer.to(self.device)
 
     def load_codeformer_model(self):
-        print(f"Load CodeFormer checkpoint from: {self.fc.CODEFORMERS_MODEL_PATH}")
+        fc = file_check.FileCheck(self.model_name)
+        print(f"Load CodeFormer checkpoint from: {fc.CODEFORMERS_MODEL_PATH}")
         
         model = ARCH_REGISTRY.get('CodeFormer')(dim_embd=512, codebook_size=1024, n_head=8, n_layers=9, connect_list=['32', '64', '128', '256']).to(self.device)
 
-        ckpt_path = self.fc.CODEFORMERS_MODEL_PATH
+        ckpt_path = fc.CODEFORMERS_MODEL_PATH
         checkpoint = torch.load(ckpt_path)['params_ema']
         model.load_state_dict(checkpoint)
         return model.eval()

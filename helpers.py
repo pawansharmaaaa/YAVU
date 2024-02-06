@@ -293,11 +293,13 @@ class ModelProcessors:
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 class FaceHelpers:
 
-    def __init__(self, image_mode=False, max_batch_size=16, dimensions=None):
+    def __init__(self, image_mode=False, max_batch_size=16, dimensions=None, model_name='RealESRGAN_x4plus'):
+
+        fc = file_check.FileCheck(self.model_name)
 
         self.max_batch_size = max_batch_size
-        self.npy_directory = file_check.NPY_FILES_DIR
-        self.weights_directory = file_check.WEIGHTS_DIR
+        self.npy_directory = fc.NPY_FILES_DIR
+        self.weights_directory = fc.WEIGHTS_DIR
 
         self.height = dimensions.height
         self.width = dimensions.width

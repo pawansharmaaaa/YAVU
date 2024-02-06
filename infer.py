@@ -50,6 +50,5 @@ def infer_image(image, restorer, model_name, weight, super_sample, outscale):
 
     return save_path
 
-def infer_video(video, restorer, model_name, weight, super_sample, outscale):
-
-    # Create Objetcs
+if __name__ == '__main__':
+    infer_image('path/to/image', 'GFPGAN', 'GFPGANv1.4.pth', False, 1.0)

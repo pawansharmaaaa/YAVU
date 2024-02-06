@@ -30,7 +30,7 @@ def infer_image(image, restorer, model_name, weight, super_sample, outscale):
     extracted_face = help.extract_face(original_img)
     cropped_face, aligned_bbox, rotmax = help.align_crop_face(extracted_face)
 
-    cropped_face_size = cropped_face.shape[:2]
+    cropped_face_size = cropped_face.shape[:2][::-1]
 
     # Feed to Model
     if restorer == 'GFPGAN':

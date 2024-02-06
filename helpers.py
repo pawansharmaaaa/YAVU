@@ -38,12 +38,13 @@ class ModelProcessors:
     """
 
     def __init__(self, padding=0):
+        fc = file_check.FileCheck(self.model_name)
         self.padding = padding
-        self.npy_directory = file_check.NPY_FILES_DIR
-        self.weights_directory = file_check.WEIGHTS_DIR
+        self.npy_directory = fc.NPY_FILES_DIR
+        self.weights_directory = fc.WEIGHTS_DIR
 
-        self.detector_model_path = os.path.join(file_check.MP_WEIGHTS_DIR, 'blaze_face_short_range.tflite')
-        self.landmarker_model_path = os.path.join(file_check.MP_WEIGHTS_DIR, "face_landmarker.task")
+        self.detector_model_path = os.path.join(fc.MP_WEIGHTS_DIR, 'blaze_face_short_range.tflite')
+        self.landmarker_model_path = os.path.join(fc.MP_WEIGHTS_DIR, "face_landmarker.task")
         self.gen_face_route_index()
 
     def detect_for_image(self, frame):

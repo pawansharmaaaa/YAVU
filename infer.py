@@ -57,4 +57,4 @@ def infer_image(image, restorer, model_name, weight, super_sample, outscale):
     return save_path
 
 if __name__ == '__main__':
-    infer_image(r'E:\YAVU\Test_data\Inputs\ts2.png', 'GFPGAN', 'RealESRGAN_x4plus', 0.5, True, 1.0)
+    infer_image(r'/content/ts2.png', 'GFPGAN', 'RealESRGAN_x4plus', 0.5, True, 1.0)

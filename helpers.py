@@ -37,7 +37,8 @@ class ModelProcessors:
             485: Mouth center
     """
 
-    def __init__(self, padding=0):
+    def __init__(self, padding=0, model_name='RealESRGAN_x4plus'):
+        self.model_name = model_name
         fc = file_check.FileCheck(self.model_name)
         self.padding = padding
         self.npy_directory = fc.NPY_FILES_DIR

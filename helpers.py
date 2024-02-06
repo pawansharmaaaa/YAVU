@@ -296,7 +296,8 @@ class ModelProcessors:
 class FaceHelpers:
 
     def __init__(self, image_mode=False, max_batch_size=16, dimensions=None, model_name='RealESRGAN_x4plus'):
-
+        
+        self.model_name = model_name
         fc = file_check.FileCheck(self.model_name)
 
         self.max_batch_size = max_batch_size

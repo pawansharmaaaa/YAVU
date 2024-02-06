@@ -51,4 +51,4 @@ def infer_image(image, restorer, model_name, weight, super_sample, outscale):
     return save_path
 
 if __name__ == '__main__':
-    infer_image('path/to/image', 'GFPGAN', 'RealESRGAN_x4plus', 0.5, True, 1.0)
+    infer_image('/content/ts2.png', 'GFPGAN', 'RealESRGAN_x4plus', 0.5, True, 1.0)

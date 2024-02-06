@@ -30,6 +30,8 @@ def infer_image(image, restorer, model_name, weight, super_sample, outscale):
     extracted_face = help.extract_face(original_img)
     cropped_face, aligned_bbox, rotmax = help.align_crop_face(extracted_face)
 
+    cropped_face_size = cropped_face.shape[:2]
+
     # Feed to Model
     if restorer == 'GFPGAN':
         restored_face = ml.restore_wGFPGAN(cropped_face)
@@ -37,6 +39,7 @@ def infer_image(image, restorer, model_name, weight, super_sample, outscale):
         restored_face = ml.restore_wCodeFormer(cropped_face)
 
     # Postprocess the image
+    restored_face = cv2.resize(restored_face, cropped_face_size, interpolation=cv2.INTER_LANCZOS4)
     processed_ready = help.paste_back_black_bg(restored_face, aligned_bbox, original_img)
     ready_to_paste = help.unwarp_align(processed_ready, rotmax)
     final_blend = help.paste_back(ready_to_paste, original_img, mask, inv_mask, center)

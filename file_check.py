@@ -3,6 +3,9 @@ from basicsr.utils.download_util import load_file_from_url
 
 class FileCheck:
     def __init__(self, real_esr_gan_model_name):
+
+        self.real_esr_gan_model_name = real_esr_gan_model_name
+
         self.LANDMARKER_MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/latest/face_landmarker.task'
         self.DETECTOR_MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/latest/blaze_face_short_range.tflite'
         self.GFPGAN_MODEL_URL = 'https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.4.pth'
@@ -36,7 +39,7 @@ class FileCheck:
         self.MP_DETECTOR_MODEL_PATH = os.path.join(self.MP_WEIGHTS_DIR, 'blaze_face_short_range.tflite')
         self.GFPGAN_MODEL_PATH = os.path.join(self.GFPGAN_WEIGHTS_DIR, 'GFPGANv1.4.pth')
         self.CODEFORMERS_MODEL_PATH = os.path.join(self.CODEFORMERS_WEIGHTS_DIR, 'codeformer.pth')
-        self.REALESRGAN_MODEL_PATH = os.path.join(self.REALESRGAN_WEIGHTS_DIR, f'{real_esr_gan_model_name}.pth')
+        self.REALESRGAN_MODEL_PATH = os.path.join(self.REALESRGAN_WEIGHTS_DIR, f'{self.real_esr_gan_model_name}.pth')
 
         self.perform_check()
 

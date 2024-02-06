@@ -12,19 +12,23 @@ import numpy as np
 from basicsr.utils.registry import ARCH_REGISTRY
 from basicsr.utils import img2tensor, tensor2img
 from torchvision.transforms.functional import normalize
-# from models import Wav2Lip
 from gfpgan.archs.gfpganv1_clean_arch import GFPGANv1Clean
+from realesrgan.archs.srvgg_arch import SRVGGNetCompact
+from basicsr.archs.rrdbnet_arch import RRDBNet
+from realesrgan import RealESRGANer
 
-class model_loaders:
+class ModelLoaders:
 
-    def __init__(self, restorer, weight):
+    def __init__(self, restorer, model_name, weight):
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.weight = weight
-        # self.wav2lip_model = self.load_wav2lip_model()
+        self.model_name = model_name
         if restorer == 'GFPGAN':
             self.restorer = self.load_gfpgan_model()
         elif restorer == 'CodeFormer':
             self.restorer = self.load_codeformer_model()
+
+        self.fc = file_check.FileCheck(self.model_name)
 
     def _load(self, checkpoint_path):
         if self.device == 'cuda':
@@ -41,15 +45,30 @@ class model_loaders:
             warnings.warn("YAVU uses RealESRGAN for backgound upscaling and it's inference is really slow on CPU. Please consider using GPU.")
             bg_upsampler = None
         else:
-            from basicsr.archs.rrdbnet_arch import RRDBNet
-            from realesrgan import RealESRGANer
-            esr_model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32, scale=4)
-            netscale = 4
+            if self.model_name == 'RealESRGAN_x4plus':  # x4 RRDBNet model
+                model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32, scale=4)
+                netscale = 4
+            elif self.model_name == 'RealESRNet_x4plus':  # x4 RRDBNet model
+                model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32, scale=4)
+                netscale = 4
+            elif self.model_name == 'RealESRGAN_x4plus_anime_6B':  # x4 RRDBNet model with 6 blocks
+                model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=6, num_grow_ch=32, scale=4)
+                netscale = 4
+            elif self.model_name == 'RealESRGAN_x2plus':  # x2 RRDBNet model
+                model = RRDBNet(num_in_ch=3, num_out_ch=3, num_feat=64, num_block=23, num_grow_ch=32, scale=2)
+                netscale = 2
+            elif self.model_name == 'realesr-animevideov3':  # x4 VGG-style model (XS size)
+                model = SRVGGNetCompact(num_in_ch=3, num_out_ch=3, num_feat=64, num_conv=16, upscale=4, act_type='prelu')
+                netscale = 4
+            elif self.model_name == 'realesr-general-x4v3':  # x4 VGG-style model (S size)
+                model = SRVGGNetCompact(num_in_ch=3, num_out_ch=3, num_feat=64, num_conv=32, upscale=4, act_type='prelu')
+                netscale = 4
+
             bg_upsampler = RealESRGANer(
                 scale=netscale,
-                model_path=file_check.REALESRGAN_MODEL_PATH,
+                model_path=self.fc.REALESRGAN_MODEL_PATH,
                 dni_weight=None,
-                model=esr_model,
+                model=model,
                 tile=0,
                 tile_pad=10,
                 pre_pad=0,
@@ -60,7 +79,7 @@ class model_loaders:
 
     def load_gfpgan_model(self):
         
-        print(f"Load GFPGAN checkpoint from: {file_check.GFPGAN_MODEL_PATH}")
+        print(f"Load GFPGAN checkpoint from: {self.fc.GFPGAN_MODEL_PATH}")
         gfpgan = GFPGANv1Clean(
                         out_size=512,
                         num_style_feat=512,
@@ -73,7 +92,7 @@ class model_loaders:
                         narrow=1,
                         sft_half=True)
 
-        loadnet = torch.load(file_check.GFPGAN_MODEL_PATH)
+        loadnet = torch.load(self.fc.GFPGAN_MODEL_PATH)
 
         if 'params_ema' in loadnet:
             keyname = 'params_ema'
@@ -85,11 +104,11 @@ class model_loaders:
         return restorer.to(self.device)
 
     def load_codeformer_model(self):
-        print(f"Load CodeFormer checkpoint from: {file_check.CODEFORMERS_MODEL_PATH}")
+        print(f"Load CodeFormer checkpoint from: {self.fc.CODEFORMERS_MODEL_PATH}")
         
         model = ARCH_REGISTRY.get('CodeFormer')(dim_embd=512, codebook_size=1024, n_head=8, n_layers=9, connect_list=['32', '64', '128', '256']).to(self.device)
 
-        ckpt_path = file_check.CODEFORMERS_MODEL_PATH
+        ckpt_path = self.fc.CODEFORMERS_MODEL_PATH
         checkpoint = torch.load(ckpt_path)['params_ema']
         model.load_state_dict(checkpoint)
         return model.eval()

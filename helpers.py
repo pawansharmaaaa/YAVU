@@ -20,7 +20,7 @@ class FrameDimensions:
         self.height = height
         self.width = width
 
-class model_processor:
+class ModelProcessors:
 
     """
     INDEXES:
